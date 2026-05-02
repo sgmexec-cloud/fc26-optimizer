@@ -9,7 +9,6 @@ st.title("⚽ FC 26 Attribute Optimizer")
 # Connect to the Gemini Brain using your Secret Key
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    # We add tools='code_execution' so the API can run Python math just like the Gem did!
     model = genai.GenerativeModel('gemini-2.5-flash', tools='code_execution')
 except Exception as e:
     st.error("Error connecting to Gemini API. Please check your Secrets.")
@@ -23,6 +22,23 @@ if "player_request" not in st.session_state:
 st.divider()
 
 # ==========================================
+# DATA STITCHING FUNCTION
+# ==========================================
+# This safely glues your 4 CSVs together in a fraction of a second
+@st.cache_data
+def load_master_costs():
+    try:
+        df1 = pd.read_csv("COST_1.csv")
+        df2 = pd.read_csv("COST_2.csv")
+        df3 = pd.read_csv("COST_3.csv")
+        df4 = pd.read_csv("COST_4.csv")
+        master_df = pd.concat([df1, df2, df3, df4], ignore_index=True)
+        return master_df
+    except Exception as e:
+        st.error(f"Waiting for COST files 1-4 to be uploaded... ({e})")
+        return pd.DataFrame() # Return empty if not uploaded yet
+
+# ==========================================
 # STEP 1: THE SCOUTING PHASE
 # ==========================================
 st.header("Step 1: Scout the Blueprint")
@@ -32,41 +48,48 @@ if st.button("Generate Scouting Report"):
     if player_input:
         with st.spinner("🕵️‍♂️ Analyzing databases to find the perfect Archetype & Playstyles..."):
             try:
-                # Load only the files needed for Phase 1
+                # Load files
                 all_arch = pd.read_csv("ALL_ARCHETYPES.csv").to_csv(index=False)
                 arch_profile = pd.read_csv("ARCHETYPE_PROFILE.csv").to_csv(index=False)
                 ps_info = pd.read_csv("PLAYSTYLE_INFO.csv").to_csv(index=False)
                 specs = pd.read_csv("SPECIALISATIONS.csv").to_csv(index=False)
                 
-                prompt_1 = f"""
-                You are the ultimate FC 26 Scout. Create a blueprint for a "{player_input}".
+                # Get the FULL stitched database
+                cost_df = load_master_costs()
                 
-                Databases provided below:
-                --- ALL_ARCHETYPES ---
-                {all_arch}
-                --- ARCHETYPE_PROFILE ---
-                {arch_profile}
-                --- PLAYSTYLE_INFO ---
-                {ps_info}
-                --- SPECIALISATIONS ---
-                {specs}
-                
-                Instructions:
-                1. Pick the best Archetype from ARCHETYPE_PROFILE and recommend Height/Weight.
-                2. Equip EXACTLY 3 Playstyle+ (Read Base_Playstyle_Plus).
-                3. Pick the 8 best standard Playstyles based on PLAYSTYLE_INFO.
-                4. Check SPECIALISATIONS. If it improves realism, swap 1 Base Playstyle+ for the bonus one.
-                5. Sort attributes into Core (6-8), Secondary (10-12), and Tertiary (the rest).
-                6. Assign target Skill Moves and Weak Foot.
-                
-                Output a clean, readable Scouting Report. Make sure to bold the **Chosen Archetype**. DO NOT MENTION ATTRIBUTE POINTS.
-                """
-                response_1 = model.generate_content(prompt_1)
-                
-                # Save to memory so it stays on screen
-                st.session_state.scout_report = response_1.text
-                st.session_state.player_request = player_input
-                st.rerun() # Refresh the screen
+                if not cost_df.empty:
+                    available_archetypes = cost_df['Archetype'].str.upper().unique().tolist()
+                    
+                    prompt_1 = f"""
+                    You are the ultimate FC 26 Scout. Create a blueprint for a "{player_input}".
+                    
+                    Databases provided below:
+                    --- ALL_ARCHETYPES ---
+                    {all_arch}
+                    --- ARCHETYPE_PROFILE ---
+                    {arch_profile}
+                    --- PLAYSTYLE_INFO ---
+                    {ps_info}
+                    --- SPECIALISATIONS ---
+                    {specs}
+                    
+                    Instructions:
+                    1. Pick the best Archetype from ARCHETYPE_PROFILE and recommend Height/Weight. 
+                       **CRITICAL DATABASE RESTRICTION: You MUST ONLY select an Archetype from this exact list of currently mapped data: {available_archetypes}. Do not pick any archetype outside of this list.**
+                    2. Equip EXACTLY 3 Playstyle+ (Read Base_Playstyle_Plus).
+                    3. Pick the 8 best standard Playstyles based on PLAYSTYLE_INFO.
+                    4. Check SPECIALISATIONS. If it improves realism, swap 1 Base Playstyle+ for the bonus one.
+                    5. Sort attributes into Core (6-8), Secondary (10-12), and Tertiary (the rest).
+                    6. Assign target Skill Moves and Weak Foot.
+                    
+                    Output a clean, readable Scouting Report. Make sure to bold the **Chosen Archetype**. DO NOT MENTION ATTRIBUTE POINTS.
+                    List the exact Attribute minimums required for each of the 8 Playstyles next to their name so the Python engine remembers them later.
+                    """
+                    response_1 = model.generate_content(prompt_1)
+                    
+                    st.session_state.scout_report = response_1.text
+                    st.session_state.player_request = player_input
+                    st.rerun() 
                 
             except Exception as e:
                 st.error(f"Something went wrong: {e}")
@@ -74,7 +97,7 @@ if st.button("Generate Scouting Report"):
         st.warning("Please enter a player identity.")
 
 # ==========================================
-# STEP 2: THE MATH ENGINE (Only shows if Step 1 is done)
+# STEP 2: THE MATH ENGINE
 # ==========================================
 if st.session_state.scout_report:
     st.success("✅ Scouting Complete!")
@@ -89,9 +112,11 @@ if st.session_state.scout_report:
     if st.button("Calculate Perfect Stats", type="primary"):
         with st.spinner("🧠 Writing and running Python script to distribute exactly to 0 AP... (This takes about 30-45 seconds)"):
             try:
-                # Load only the files needed for Phase 2
                 playstyles = pd.read_csv("PLAYSTYLES.csv").to_csv(index=False)
-                master_cost = pd.read_csv("MASTER_COST_DATA.csv").to_csv(index=False)
+                
+                # Get the stitched database as text for the AI to read
+                cost_df = load_master_costs()
+                master_cost_string = cost_df.to_csv(index=False)
                 
                 prompt_2 = f"""
                 You are an FC 26 Optimizer using a Python Code Interpreter. 
@@ -103,7 +128,7 @@ if st.session_state.scout_report:
                 --- PLAYSTYLES ---
                 {playstyles}
                 --- MASTER_COST_DATA ---
-                {master_cost}
+                {master_cost_string}
                 
                 Instructions for your Python code:
                 1. Dynamically read the MASTER_COST_DATA provided. 
@@ -122,7 +147,6 @@ if st.session_state.scout_report:
                 st.success("✅ Math Engine Complete!")
                 st.markdown(response_2.text)
                 
-                # Add a button to reset the app for the next build
                 if st.button("Start New Build"):
                     st.session_state.scout_report = None
                     st.session_state.player_request = ""
