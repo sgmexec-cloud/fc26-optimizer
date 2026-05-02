@@ -10,7 +10,7 @@ st.title("⚽ FC 26 Attribute Optimizer")
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     # We add tools='code_execution' so the API can run Python math just like the Gem did!
-    model = genai.GenerativeModel('gemini-1.5-flash', tools='code_execution')
+    model = genai.GenerativeModel('gemini-2.5-flash', tools='code_execution')
 except Exception as e:
     st.error("Error connecting to Gemini API. Please check your Secrets.")
 
