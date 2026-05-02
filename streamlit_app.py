@@ -36,7 +36,7 @@ def load_master_costs():
         return master_df
     except Exception as e:
         st.error(f"Waiting for COST files 1-4 to be uploaded... ({e})")
-        return pd.DataFrame() # Return empty if not uploaded yet
+        return pd.DataFrame() # Return empty if not uploaded 
 
 # ==========================================
 # STEP 1: THE SCOUTING PHASE
@@ -48,11 +48,12 @@ if st.button("Generate Scouting Report"):
     if player_input:
         with st.spinner("🕵️‍♂️ Analyzing databases to find the perfect Archetype & Playstyles..."):
             try:
-                # Load files
+                # Load files (ADDED PLAYSTYLES HERE!)
                 all_arch = pd.read_csv("ALL_ARCHETYPES.csv").to_csv(index=False)
                 arch_profile = pd.read_csv("ARCHETYPE_PROFILE.csv").to_csv(index=False)
                 ps_info = pd.read_csv("PLAYSTYLE_INFO.csv").to_csv(index=False)
                 specs = pd.read_csv("SPECIALISATIONS.csv").to_csv(index=False)
+                playstyles = pd.read_csv("PLAYSTYLES.csv").to_csv(index=False)
                 
                 # Get the FULL stitched database
                 cost_df = load_master_costs()
@@ -72,6 +73,8 @@ if st.button("Generate Scouting Report"):
                     {ps_info}
                     --- SPECIALISATIONS ---
                     {specs}
+                    --- PLAYSTYLES ---
+                    {playstyles}
                     
                     Instructions:
                     1. Pick the best Archetype from ARCHETYPE_PROFILE and recommend Height/Weight. 
@@ -83,7 +86,7 @@ if st.button("Generate Scouting Report"):
                     6. Assign target Skill Moves and Weak Foot.
                     
                     Output a clean, readable Scouting Report. Make sure to bold the **Chosen Archetype**. DO NOT MENTION ATTRIBUTE POINTS.
-                    List the exact Attribute minimums required for each of the 8 Playstyles next to their name so the Python engine remembers them later.
+                    CRITICAL: Look at PLAYSTYLES. List the exact Attribute minimums required for each of the 8 Playstyles next to their name so the Python engine remembers them later.
                     """
                     response_1 = model.generate_content(prompt_1)
                     
