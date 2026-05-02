@@ -1,0 +1,12 @@
+Archetype,MinH,MaxH,MinW,MaxW,Base_Playstyle_Plus,Recommended_Positions,Key_Attributes,Specialisations
+Magician,162,188,60,80,"Technical+,FinesseShot+,ChipShot+","LM,RM,CAM,LW,RW,ST","Acceleration,Finishing,Curve,Balance","Magician+,HotShot,Invader"
+Finisher,164,190,70,90,"FirstTouch+,QuickStep+,LowDrivenShot+","CAM,LW,RW,ST","Finishing,Volleys,Reactions,Composure","Finisher+,Presser,Hunter"
+Target,177,195,80,100,"TikiTaka+,PowerShot+,PrecisionHeader+","CAM,LW,RW,ST","ShotPower,Heading Accuracy,Jumping,Strength","Target+,Roamer,Runner"
+Recycler,172,192,65,85,"Intercept+,PressProven+,PowerShot+","CB,CDM,CM,CAM","LongShots,Interceptions,DefAwareness,Strength","Recycler+,Driver,Thief"
+Maestro,162,188,65,85,"PingedPass+,LongBallPass+,TikiTaka+","CDM,CM,LM,RM,CAM","Vision,LongPassing,BallControl,Composure","Maestro+,Crasher,Heartbeat"
+Creator,162,188,65,85,"IncisivePass+,Inventive+,Gamechanger+","CM,LM,RM,CAM,LW,RW","LongShots,Vision,ShortPassing,Curve","Creator+,Architect,Sniper"
+Spark,162,188,65,85,"Rapid+,Trickster+,Inventive+","LM,RM,CAM,LW,RW","Acceleration,Agility,BallControl,Dribbling","Spark+,Joker,Ace"
+Progressor,177,195,75,95,"Anticipate+,IncisivePass+,LongBallPass+","CB,LB,RB,CDM","LongPassing,Composure,DefAwareness,StandingTackle","Progressor+,Pioneer,Janitor"
+Boss,180,196,80,100,"AerialFortress+,Bruiser+,PrecisionHeader+","CB,LB,RB,CDM","Heading Accuracy,SlidingTackle,Strength,Aggression","Boss+,Enforcer,Capitano"
+Engine,168,188,65,85,"Jockey+,Anticipate+,Relentless+","LB,RB,CDM,CM,LM,RM,LW,RW","ShortPassing,Interceptions,StandingTackle,Stamina","Engine+,Everywhere,Gadget"
+Marauder,168,188,65,85,"Technical+,WhippedPass+,QuickStep+","LB,RB,CDM,LM,RM","SprintSpeed,Crossing,SlidingTackle,Stamina","Marauder+,Speedster,Athlete"
