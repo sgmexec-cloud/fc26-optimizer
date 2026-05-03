@@ -1,12 +1,13 @@
 import streamlit as st
 import pandas as pd
 import google.generativeai as genai
+import re
 
 # Set up the look of the web page
 st.set_page_config(page_title="FC 26 Build Engine", page_icon="⚽", layout="centered")
 st.title("⚽ FC 26 Attribute Optimizer")
 
-# Connect to the Gemini Brain using your Secret Key
+# Connect to the Gemini Brain
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     model = genai.GenerativeModel('gemini-2.5-flash', tools='code_execution')
@@ -24,7 +25,6 @@ st.divider()
 # ==========================================
 # DATA STITCHING FUNCTION
 # ==========================================
-# This safely glues your 4 CSVs together in a fraction of a second
 @st.cache_data
 def load_master_costs():
     try:
@@ -36,7 +36,7 @@ def load_master_costs():
         return master_df
     except Exception as e:
         st.error(f"Waiting for COST files 1-4 to be uploaded... ({e})")
-        return pd.DataFrame() # Return empty if not uploaded 
+        return pd.DataFrame()
 
 # ==========================================
 # STEP 1: THE SCOUTING PHASE
@@ -48,14 +48,12 @@ if st.button("Generate Scouting Report"):
     if player_input:
         with st.spinner("🕵️‍♂️ Analyzing databases to find the perfect Archetype & Playstyles..."):
             try:
-                # Load files (ADDED PLAYSTYLES HERE!)
                 all_arch = pd.read_csv("ALL_ARCHETYPES.csv").to_csv(index=False)
                 arch_profile = pd.read_csv("ARCHETYPE_PROFILE.csv").to_csv(index=False)
                 ps_info = pd.read_csv("PLAYSTYLE_INFO.csv").to_csv(index=False)
                 specs = pd.read_csv("SPECIALISATIONS.csv").to_csv(index=False)
                 playstyles = pd.read_csv("PLAYSTYLES.csv").to_csv(index=False)
                 
-                # Get the FULL stitched database
                 cost_df = load_master_costs()
                 
                 if not cost_df.empty:
@@ -77,16 +75,20 @@ if st.button("Generate Scouting Report"):
                     {playstyles}
                     
                     Instructions:
-                    1. Pick the best Archetype from ARCHETYPE_PROFILE and recommend Height/Weight. 
-                       **CRITICAL DATABASE RESTRICTION: You MUST ONLY select an Archetype from this exact list of currently mapped data: {available_archetypes}. Do not pick any archetype outside of this list.**
+                    1. Pick the best Archetype from ARCHETYPE_PROFILE. 
+                       **CRITICAL RESTRICTION: You MUST ONLY select an Archetype from this exact list: {available_archetypes}.**
                     2. Equip EXACTLY 3 Playstyle+ (Read Base_Playstyle_Plus).
                     3. Pick the 8 best standard Playstyles based on PLAYSTYLE_INFO.
-                    4. Check SPECIALISATIONS. If it improves realism, swap 1 Base Playstyle+ for the bonus one.
+                    4. Check SPECIALISATIONS. Swap 1 Base Playstyle+ for the bonus one if realistic.
                     5. Sort attributes into Core (6-8), Secondary (10-12), and Tertiary (the rest).
                     6. Assign target Skill Moves and Weak Foot.
                     
-                    Output a clean, readable Scouting Report. Make sure to bold the **Chosen Archetype**. DO NOT MENTION ATTRIBUTE POINTS.
-                    CRITICAL: Look at PLAYSTYLES. List the exact Attribute minimums required for each of the 8 Playstyles next to their name so the Python engine remembers them later.
+                    OUTPUT FORMATTING RULE:
+                    You MUST start your response with this exact line at the very top:
+                    [ARCHETYPE: Insert Name Here]
+                    
+                    Then, print the rest of your clean, readable Scouting Report below it. DO NOT MENTION ATTRIBUTE POINTS.
+                    CRITICAL: Look at PLAYSTYLES. List the exact Attribute minimums required for each of the 8 Playstyles next to their name.
                     """
                     response_1 = model.generate_content(prompt_1)
                     
@@ -113,14 +115,23 @@ if st.session_state.scout_report:
     ap_budget = st.number_input("Attribute Points (AP) Budget", min_value=1000, max_value=3500, value=2450, step=10)
     
     if st.button("Calculate Perfect Stats", type="primary"):
-        with st.spinner("🧠 Writing and running Python script to distribute exactly to 0 AP... (This takes about 30-45 seconds)"):
+        with st.spinner("🧠 Calculating the exact point distribution... (This should only take a few seconds now!)"):
             try:
                 playstyles = pd.read_csv("PLAYSTYLES.csv").to_csv(index=False)
-                
-                # Get the stitched database as text for the AI to read
                 cost_df = load_master_costs()
-                master_cost_string = cost_df.to_csv(index=False)
                 
+                # MAGIC FILTER: Find the chosen archetype in the text and slice the database!
+                match = re.search(r'\[ARCHETYPE:\s*(.+?)\]', st.session_state.scout_report)
+                chosen_arch = match.group(1).strip() if match else ""
+                
+                if chosen_arch:
+                    # Keep ONLY the rows for the selected archetype!
+                    filtered_cost_df = cost_df[cost_df['Archetype'].str.upper() == chosen_arch.upper()]
+                    master_cost_string = filtered_cost_df.to_csv(index=False)
+                else:
+                    # Fallback just in case
+                    master_cost_string = cost_df.to_csv(index=False)
+
                 prompt_2 = f"""
                 You are an FC 26 Optimizer using a Python Code Interpreter. 
                 Distribute EXACTLY {ap_budget} Attribute Points (AP) based on this blueprint:
@@ -130,19 +141,18 @@ if st.session_state.scout_report:
                 Databases provided:
                 --- PLAYSTYLES ---
                 {playstyles}
-                --- MASTER_COST_DATA ---
+                --- MASTER_COST_DATA (Filtered for chosen archetype) ---
                 {master_cost_string}
                 
                 Instructions for your Python code:
-                1. Dynamically read the MASTER_COST_DATA provided. 
+                1. Parse the MASTER_COST_DATA string directly into a Pandas DataFrame using `io.StringIO`.
                 2. Base stats cost 0 AP.
-                3. Upgrade all required Playstyle/Specialisation minimums first.
+                3. Upgrade all required Playstyle minimums first point-by-point.
                 4. Loop to exhaust Core attributes point-by-point.
                 5. Loop to exhaust Secondary attributes point-by-point.
                 6. Spend any remaining budget exclusively on Tertiary attributes by sorting cheapest first until budget is EXACTLY 0.
-                7. Keep a strict ledger of exactly how much AP is spent on each attribute.
                 
-                Output a beautiful final card showing all categories (Pace, Shooting, Passing, Dribbling, Defending, Physicality, Skill Moves, Weak Foot) and Playstyles.
+                Output a beautiful final card showing Pace, Shooting, Passing, Dribbling, Defending, Physicality, Skill Moves, and Weak Foot.
                 Next to every stat, you MUST print: `(Spent: [AP] AP)`.
                 """
                 response_2 = model.generate_content(prompt_2)
