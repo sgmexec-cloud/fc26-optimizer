@@ -115,9 +115,10 @@ if st.session_state.scout_report:
     ap_budget = st.number_input("Attribute Points (AP) Budget", min_value=1000, max_value=3500, value=2450, step=10)
     
     if st.button("Calculate Perfect Stats", type="primary"):
-        with st.spinner("🧠 Calculating the exact point distribution... (This should only take a few seconds now!)"):
+        with st.spinner("🧠 Calculating the exact point distribution... (This takes about 10-15 seconds)"):
             try:
                 playstyles = pd.read_csv("PLAYSTYLES.csv").to_csv(index=False)
+                all_arch_string = pd.read_csv("ALL_ARCHETYPES.csv").to_csv(index=False)
                 cost_df = load_master_costs()
                 
                 # MAGIC FILTER: Find the chosen archetype in the text and slice the database!
@@ -139,21 +140,74 @@ if st.session_state.scout_report:
                 {st.session_state.scout_report}
                 
                 Databases provided:
+                --- ALL_ARCHETYPES ---
+                {all_arch_string}
                 --- PLAYSTYLES ---
                 {playstyles}
                 --- MASTER_COST_DATA (Filtered for chosen archetype) ---
                 {master_cost_string}
                 
                 Instructions for your Python code:
-                1. Parse the MASTER_COST_DATA string directly into a Pandas DataFrame using `io.StringIO`.
-                2. Base stats cost 0 AP.
-                3. Upgrade all required Playstyle minimums first point-by-point.
-                4. Loop to exhaust Core attributes point-by-point.
-                5. Loop to exhaust Secondary attributes point-by-point.
-                6. Spend any remaining budget exclusively on Tertiary attributes by sorting cheapest first until budget is EXACTLY 0.
+                1. Parse ALL_ARCHETYPES and MASTER_COST_DATA using `io.StringIO`.
+                2. CRITICAL: Read ALL_ARCHETYPES to find the exact 'Base Value' and 'Max Value' for the chosen Archetype. 
+                3. The Base Values cost 0 AP. You MUST NEVER upgrade any attribute beyond its Max Value.
+                4. Upgrade all required Playstyle minimums first point-by-point.
+                5. Loop to exhaust Core attributes point-by-point.
+                6. Loop to exhaust Secondary attributes point-by-point.
+                7. Spend any remaining budget exclusively on Tertiary attributes by sorting cheapest first until budget is EXACTLY 0.
                 
-                Output a beautiful final card showing Pace, Shooting, Passing, Dribbling, Defending, Physicality, Skill Moves, and Weak Foot.
-                Next to every stat, you MUST print: `(Spent: [AP] AP)`.
+                OUTPUT FORMATTING RULE (CRITICAL):
+                Do NOT use Python `print()` statements to output the final card. Let the Python script run silently. 
+                Once the math is complete, write the final response outside of the code block in pure Markdown using EXACTLY this format:
+                
+                **Total AP Spent:** [Spent] / {ap_budget} (Unspent: 0)
+
+                **Pace**
+                Acceleration: [Value] (Spent: [AP] AP)
+                Sprint Speed: [Value] (Spent: [AP] AP)
+                
+                **Shooting**
+                Att. Position: [Value] (Spent: [AP] AP)
+                Finishing: [Value] (Spent: [AP] AP)
+                Shot Power: [Value] (Spent: [AP] AP)
+                Long Shots: [Value] (Spent: [AP] AP)
+                Volleys: [Value] (Spent: [AP] AP)
+                Penalties: [Value] (Spent: [AP] AP)
+
+                **Passing**
+                Vision: [Value] (Spent: [AP] AP)
+                Crossing: [Value] (Spent: [AP] AP)
+                FK. Acc.: [Value] (Spent: [AP] AP)
+                Short Pass: [Value] (Spent: [AP] AP)
+                Long Pass: [Value] (Spent: [AP] AP)
+                Curve: [Value] (Spent: [AP] AP)
+
+                **Dribbling**
+                Agility: [Value] (Spent: [AP] AP)
+                Balance: [Value] (Spent: [AP] AP)
+                Reactions: [Value] (Spent: [AP] AP)
+                Ball Control: [Value] (Spent: [AP] AP)
+                Dribbling: [Value] (Spent: [AP] AP)
+                Composure: [Value] (Spent: [AP] AP)
+
+                **Defending**
+                Interceptions: [Value] (Spent: [AP] AP)
+                Heading Acc.: [Value] (Spent: [AP] AP)
+                Def. Aware: [Value] (Spent: [AP] AP)
+                Stand Tackle: [Value] (Spent: [AP] AP)
+                Slide Tackle: [Value] (Spent: [AP] AP)
+
+                **Physicality**
+                Jumping: [Value] (Spent: [AP] AP)
+                Stamina: [Value] (Spent: [AP] AP)
+                Strength: [Value] (Spent: [AP] AP)
+                Aggression: [Value] (Spent: [AP] AP)
+
+                **Skill Moves**
+                [Value] Stars (Spent: [AP] AP)
+
+                **Weak Foot**
+                [Value] Stars (Spent: [AP] AP)
                 """
                 response_2 = model.generate_content(prompt_2)
                 
